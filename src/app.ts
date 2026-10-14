@@ -40,6 +40,14 @@ export function formatNumber(n: number): string {
   return String(Object.is(rounded, -0) ? 0 : rounded);
 }
 
+// OPERATION_KEYS maps the keys that choose an operation from the keyboard.
+const OPERATION_KEYS: Record<string, Operation> = {
+  "+": "add",
+  "-": "subtract",
+  "*": "multiply",
+  "/": "divide",
+};
+
 const OPERATION_SYMBOLS: Record<Operation, string> = {
   add: "+",
   subtract: "−",
@@ -119,6 +127,19 @@ export function mount(root: HTMLElement): void {
     resultEl.hidden = false;
   };
 
+  const clear = (): void => {
+    inputA.value = "";
+    inputB.value = "";
+    typedText.delete(inputA);
+    typedText.delete(inputB);
+    errorEl.textContent = "";
+    errorEl.hidden = true;
+    resultEl.textContent = "";
+    resultEl.hidden = true;
+    operationChosen = false;
+    inputA.focus();
+  };
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const a = parseOperand(inputA.value);
@@ -134,6 +155,89 @@ export function mount(root: HTMLElement): void {
       addToHistory(formatEntry(a, b, op, result.value));
     } else {
       showError(result.error);
+    }
+  });
+
+  // Keyboard support. Digits typed with focus outside the number fields go to
+  // the active field: the first one until an operation has been chosen, then
+  // the second one.
+  let operationChosen = false;
+  select.addEventListener("change", () => {
+    operationChosen = true;
+  });
+
+  // A number field's value is "" while its text isn't a valid number yet (for
+  // example "1."), so the text typed from outside the field is remembered
+  // until the field changes some other way.
+  const typedText = new Map<HTMLInputElement, { text: string; value: string }>();
+  let appending = false;
+  for (const input of [inputA, inputB]) {
+    input.addEventListener("input", () => {
+      if (!appending) typedText.delete(input);
+    });
+  }
+
+  const append = (input: HTMLInputElement, key: string): void => {
+    const state = typedText.get(input);
+    const current = state && state.value === input.value ? state.text : input.value;
+    const text = current + key;
+    input.value = text;
+    typedText.set(input, { text, value: input.value });
+    appending = true;
+    try {
+      input.dispatchEvent(
+        new InputEvent("input", { bubbles: true, data: key, inputType: "insertText" }),
+      );
+    } finally {
+      appending = false;
+    }
+  };
+
+  const isEditable = (el: Element): boolean =>
+    el instanceof HTMLTextAreaElement ||
+    (el instanceof HTMLElement && el.isContentEditable) ||
+    (el instanceof HTMLInputElement &&
+      !["button", "submit", "reset", "checkbox", "radio", "range", "color", "file", "image"].includes(el.type));
+
+  document.addEventListener("keydown", (event) => {
+    // Ignore keys once the app is gone, keys other code has handled and
+    // shortcuts with modifiers.
+    if (!root.isConnected || event.defaultPrevented || event.isComposing) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    // Only react to keys in the app, or with focus on nothing in particular.
+    const inApp = root.contains(target);
+    if (!inApp && target !== document.body && target !== document.documentElement) return;
+    const key = event.key;
+
+    if (key === "Escape") {
+      event.preventDefault();
+      clear();
+      return;
+    }
+
+    if (key === "Enter") {
+      // Buttons keep their own Enter behaviour (the Calculate button submits).
+      if (target instanceof HTMLButtonElement) return;
+      event.preventDefault();
+      form.requestSubmit();
+      return;
+    }
+
+    const op = OPERATION_KEYS[key];
+    const inFirstOrOutside = target === inputA || !isEditable(target);
+    if (op && inFirstOrOutside && parseOperand(inputA.value) !== undefined) {
+      event.preventDefault();
+      select.value = op;
+      operationChosen = true;
+      inputB.focus();
+      return;
+    }
+
+    if (/^[0-9.]$/.test(key) && !isEditable(target)) {
+      event.preventDefault();
+      append(operationChosen ? inputB : inputA, key);
     }
   });
 }
