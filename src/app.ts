@@ -40,6 +40,19 @@ export function formatNumber(n: number): string {
   return String(Object.is(rounded, -0) ? 0 : rounded);
 }
 
+const OPERATION_SYMBOLS: Record<Operation, string> = {
+  add: "+",
+  subtract: "−",
+  multiply: "×",
+  divide: "÷",
+};
+
+// formatEntry describes a successful calculation for the history panel, for
+// example '6 × 3 = 18'.
+export function formatEntry(a: number, b: number, op: Operation, value: number): string {
+  return `${formatNumber(a)} ${OPERATION_SYMBOLS[op]} ${formatNumber(b)} = ${formatNumber(value)}`;
+}
+
 // mount renders the app into root. It's separate from main.ts so tests can
 // render the app into a test document.
 export function mount(root: HTMLElement): void {
@@ -60,6 +73,12 @@ export function mount(root: HTMLElement): void {
     </form>
     <p class="error" role="alert" hidden></p>
     <output class="result" hidden></output>
+    <button type="button" class="history-toggle" aria-expanded="false">History</button>
+    <section class="history" aria-label="History" hidden>
+      <h2>History</h2>
+      <p class="history-empty">No calculations yet</p>
+      <ol class="history-list"></ol>
+    </section>
   `;
 
   const form = root.querySelector("form")!;
@@ -68,6 +87,23 @@ export function mount(root: HTMLElement): void {
   const select = form.querySelector("select")!;
   const errorEl = root.querySelector<HTMLParagraphElement>(".error")!;
   const resultEl = root.querySelector<HTMLOutputElement>(".result")!;
+  const historyToggle = root.querySelector<HTMLButtonElement>(".history-toggle")!;
+  const historyPanel = root.querySelector<HTMLElement>(".history")!;
+  const historyEmpty = root.querySelector<HTMLParagraphElement>(".history-empty")!;
+  const historyList = root.querySelector<HTMLOListElement>(".history-list")!;
+
+  historyToggle.addEventListener("click", () => {
+    historyPanel.hidden = !historyPanel.hidden;
+    historyToggle.setAttribute("aria-expanded", String(!historyPanel.hidden));
+  });
+
+  // addToHistory puts the newest entry at the top of the list.
+  const addToHistory = (entry: string): void => {
+    const item = document.createElement("li");
+    item.textContent = entry;
+    historyList.prepend(item);
+    historyEmpty.hidden = true;
+  };
 
   const showError = (message: string): void => {
     resultEl.textContent = "";
@@ -91,8 +127,13 @@ export function mount(root: HTMLElement): void {
       showError("Please enter a valid number in both fields");
       return;
     }
-    const result = calculate(a, b, select.value as Operation);
-    if (result.ok) showResult(result.value);
-    else showError(result.error);
+    const op = select.value as Operation;
+    const result = calculate(a, b, op);
+    if (result.ok) {
+      showResult(result.value);
+      addToHistory(formatEntry(a, b, op, result.value));
+    } else {
+      showError(result.error);
+    }
   });
 }
