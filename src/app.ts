@@ -161,6 +161,13 @@ export function mount(root: HTMLElement): void {
     </form>
     <p class="error" role="alert" hidden></p>
     <output class="result" hidden></output>
+    <div class="memory" role="group" aria-label="Memory">
+      <button type="button" class="memory-plus" aria-label="Memory plus" disabled>M+</button>
+      <button type="button" class="memory-minus" aria-label="Memory minus" disabled>M−</button>
+      <button type="button" class="memory-recall" aria-label="Memory recall">MR</button>
+      <button type="button" class="memory-clear" aria-label="Memory clear">MC</button>
+      <span class="memory-indicator" hidden></span>
+    </div>
     <button type="button" class="history-toggle" aria-expanded="false">History</button>
     <section class="history" aria-label="History" hidden>
       <h2>History</h2>
@@ -180,16 +187,60 @@ export function mount(root: HTMLElement): void {
   const historyPanel = root.querySelector<HTMLElement>(".history")!;
   const historyEmpty = root.querySelector<HTMLParagraphElement>(".history-empty")!;
   const historyList = root.querySelector<HTMLOListElement>(".history-list")!;
+  const memoryPlus = root.querySelector<HTMLButtonElement>(".memory-plus")!;
+  const memoryMinus = root.querySelector<HTMLButtonElement>(".memory-minus")!;
+  const memoryRecall = root.querySelector<HTMLButtonElement>(".memory-recall")!;
+  const memoryClear = root.querySelector<HTMLButtonElement>(".memory-clear")!;
+  const memoryIndicator = root.querySelector<HTMLSpanElement>(".memory-indicator")!;
+
+  // memory is the stored value; currentResult is the result on screen, or
+  // undefined while an error (or nothing) is shown.
+  let memory = 0;
+  let currentResult: number | undefined;
+
+  // setMemory stores value and shows it, hiding the indicator while it's 0
+  // (including floating point noise such as 0.1 + 0.2 − 0.3).
+  const setMemory = (value: number): void => {
+    memory = value;
+    const shown = formatNumber(memory);
+    memoryIndicator.textContent = `M: ${shown}`;
+    memoryIndicator.hidden = shown === "0";
+  };
+
+  const setCurrentResult = (value: number | undefined): void => {
+    currentResult = value;
+    memoryPlus.disabled = value === undefined;
+    memoryMinus.disabled = value === undefined;
+  };
+
+  memoryPlus.addEventListener("click", () => {
+    if (currentResult !== undefined) setMemory(memory + currentResult);
+  });
+  memoryMinus.addEventListener("click", () => {
+    if (currentResult !== undefined) setMemory(memory - currentResult);
+  });
+  memoryRecall.addEventListener("click", () => {
+    inputA.value = formatNumber(memory);
+    inputA.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  memoryClear.addEventListener("click", () => setMemory(0));
 
   historyToggle.addEventListener("click", () => {
     historyPanel.hidden = !historyPanel.hidden;
     historyToggle.setAttribute("aria-expanded", String(!historyPanel.hidden));
   });
 
-  // addToHistory puts the newest entry at the top of the list.
-  const addToHistory = (entry: string): void => {
+  // addToHistory puts the newest entry at the top of the list, with a control
+  // that stores the entry's result in memory.
+  const addToHistory = (entry: string, value: number): void => {
     const item = document.createElement("li");
-    item.textContent = entry;
+    item.append(entry, " ");
+    const store = document.createElement("button");
+    store.type = "button";
+    store.className = "history-store";
+    store.textContent = "Store in memory";
+    store.addEventListener("click", () => setMemory(value));
+    item.append(store);
     historyList.prepend(item);
     historyEmpty.hidden = true;
   };
@@ -199,6 +250,7 @@ export function mount(root: HTMLElement): void {
     resultEl.hidden = true;
     errorEl.textContent = message;
     errorEl.hidden = false;
+    setCurrentResult(undefined);
   };
 
   const showResult = (value: number): void => {
@@ -206,6 +258,7 @@ export function mount(root: HTMLElement): void {
     errorEl.hidden = true;
     resultEl.textContent = `Result: ${formatNumber(value)}`;
     resultEl.hidden = false;
+    setCurrentResult(value);
   };
 
   // Single-number functions only use the first field, so hide the second.
@@ -227,7 +280,7 @@ export function mount(root: HTMLElement): void {
       const result = calculateFunction(a, fn);
       if (result.ok) {
         showResult(result.value);
-        addToHistory(formatFunctionEntry(a, fn, result.value));
+        addToHistory(formatFunctionEntry(a, fn, result.value), result.value);
       } else {
         showError(result.error);
       }
@@ -242,7 +295,7 @@ export function mount(root: HTMLElement): void {
     const result = calculate(a, b, op);
     if (result.ok) {
       showResult(result.value);
-      addToHistory(formatEntry(a, b, op, result.value));
+      addToHistory(formatEntry(a, b, op, result.value), result.value);
     } else {
       showError(result.error);
     }
