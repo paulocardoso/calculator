@@ -165,6 +165,7 @@ export function mount(root: HTMLElement): void {
         </select>
       </label>
       <label class="second-number">Second number <input name="b" type="number" step="any" inputmode="decimal" /></label>
+      <button type="button" class="percent" aria-label="Percent">%</button>
       <button type="submit">Calculate</button>
     </form>
     <p class="error" role="alert" hidden></p>
@@ -200,6 +201,7 @@ export function mount(root: HTMLElement): void {
   const memoryRecall = root.querySelector<HTMLButtonElement>(".memory-recall")!;
   const memoryClear = root.querySelector<HTMLButtonElement>(".memory-clear")!;
   const memoryIndicator = root.querySelector<HTMLSpanElement>(".memory-indicator")!;
+  const percentButton = form.querySelector<HTMLButtonElement>(".percent")!;
 
   // memory is the stored value; currentResult is the result on screen, or
   // undefined while an error (or nothing) is shown.
@@ -356,6 +358,27 @@ export function mount(root: HTMLElement): void {
     }
   };
 
+  // The active field is the first one until a two-number operation has been
+  // chosen, then the second one.
+  const activeField = (): HTMLInputElement =>
+    operationChosen && !isMathFunction(select.value) ? inputB : inputA;
+
+  // percent divides the active field by 100. It only changes the field; it
+  // doesn't calculate or add to the history.
+  const percent = (): void => {
+    const input = activeField();
+    const n = parseOperand(input.value);
+    if (n === undefined) {
+      showError(`Please enter a valid number in the ${input === inputA ? "first" : "second"} field`);
+      return;
+    }
+    errorEl.textContent = "";
+    errorEl.hidden = true;
+    input.value = formatNumber(n / 100);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  percentButton.addEventListener("click", percent);
+
   const isEditable = (el: Element): boolean =>
     el instanceof HTMLTextAreaElement ||
     (el instanceof HTMLElement && el.isContentEditable) ||
@@ -385,6 +408,14 @@ export function mount(root: HTMLElement): void {
       if (target instanceof HTMLButtonElement) return;
       event.preventDefault();
       form.requestSubmit();
+      return;
+    }
+
+    if (key === "%") {
+      if (target === activeField() || !isEditable(target)) {
+        event.preventDefault();
+        percent();
+      }
       return;
     }
 
