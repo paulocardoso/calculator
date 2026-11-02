@@ -141,8 +141,9 @@ export function formatEntry(a: number, b: number, op: Operation, value: number):
   return `${formatNumber(a)} ${OPERATION_SYMBOLS[op]} ${formatNumber(b)} = ${formatNumber(value)}`;
 }
 
-// KEYPAD_HTML is the calculator's keys, laid out like the iPhone Calculator:
-// the scientific and memory keys above the standard keypad. Each key names
+// KEYPAD_HTML is the calculator's keys, laid out like the iPhone Calculator
+// in landscape: the scientific and memory keys in columns to the left of the
+// standard keypad. Each key names
 // its action in data-key.
 const KEYPAD_HTML = `
   <div class="keys keys-sci" role="group" aria-label="Scientific and memory keys">
@@ -208,6 +209,7 @@ export function mount(root: HTMLElement): void {
   const memoryPlus = keypad.querySelector<HTMLButtonElement>('[data-key="m+"]')!;
   const memoryMinus = keypad.querySelector<HTMLButtonElement>('[data-key="m-"]')!;
   const operatorKeys = Array.from(keypad.querySelectorAll<HTMLButtonElement>(".key-op"));
+  const clearKey = keypad.querySelector<HTMLButtonElement>('[data-key="clear"]')!;
   const historyToggle = root.querySelector<HTMLButtonElement>(".history-toggle")!;
   const historyPanel = root.querySelector<HTMLElement>(".history")!;
   const historyEmpty = root.querySelector<HTMLParagraphElement>(".history-empty")!;
@@ -228,6 +230,10 @@ export function mount(root: HTMLElement): void {
   let startNew = false;
   let memory = 0;
 
+  // The clear key clears everything once the display is back to 0, and only
+  // the current entry before that.
+  const clearsAll = (): boolean => error === undefined && entry === "0";
+
   const update = (): void => {
     displayEl.textContent = error ?? entry;
     displayEl.classList.toggle("is-error", error !== undefined);
@@ -238,6 +244,11 @@ export function mount(root: HTMLElement): void {
       k.classList.toggle("is-active", active);
       if (k.dataset.key !== "equals") k.setAttribute("aria-pressed", String(active));
     }
+    // Like the iPhone, the key reads C while there's an entry to clear and
+    // AC once the display is back to 0.
+    const all = clearsAll();
+    clearKey.textContent = all ? "AC" : "C";
+    clearKey.setAttribute("aria-label", all ? "All clear" : "Clear");
   };
 
   const current = (): number => Number(entry);
@@ -355,6 +366,15 @@ export function mount(root: HTMLElement): void {
     startNew = false;
   };
 
+  // clearEntry clears only the number in the display (or an error); a
+  // pending calculation stays, and the next number becomes its second number.
+  const clearEntry = (): void => {
+    entry = "0";
+    error = undefined;
+    awaitingOperand = false;
+    startNew = false;
+  };
+
   const toggleSign = (): void => {
     if (error !== undefined) return;
     if (awaitingOperand) {
@@ -400,6 +420,10 @@ export function mount(root: HTMLElement): void {
           equals();
           break;
         case "clear":
+          if (clearsAll()) clearAll();
+          else clearEntry();
+          break;
+        case "clearAll":
           clearAll();
           break;
         case "sign":
@@ -461,7 +485,7 @@ export function mount(root: HTMLElement): void {
     if (/^[0-9.]$/.test(key)) name = key;
     else if (Object.hasOwn(OPERATION_KEYS, key)) name = OPERATION_KEYS[key];
     else if (key === "Enter" || key === "=") name = "equals";
-    else if (key === "Escape") name = "clear";
+    else if (key === "Escape") name = "clearAll";
     else if (key === "Backspace") name = "backspace";
     else if (key === "%") name = "percent";
     if (name === undefined) return;
