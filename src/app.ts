@@ -1,9 +1,10 @@
-export type Operation = "add" | "subtract" | "multiply" | "divide";
+export type Operation = "add" | "subtract" | "multiply" | "divide" | "power" | "root";
 
 export type CalcResult = { ok: true; value: number } | { ok: false; error: string };
 
 // calculate applies op to a and b, returning an error instead of a value for
-// division by zero or a result too large to represent.
+// division by zero, roots that have no real value, or a result too large to
+// represent. 'power' is a to the power b and 'root' is the b-th root of a.
 export function calculate(a: number, b: number, op: Operation): CalcResult {
   let value: number;
   switch (op) {
@@ -20,9 +21,35 @@ export function calculate(a: number, b: number, op: Operation): CalcResult {
       if (b === 0) return { ok: false, error: "Cannot divide by zero" };
       value = a / b;
       break;
+    case "power":
+      if (a === 0 && b < 0) return { ok: false, error: "Cannot divide by zero" };
+      value = a ** b;
+      break;
+    case "root": {
+      const result = nthRoot(a, b);
+      if (!result.ok) return result;
+      value = result.value;
+      break;
+    }
   }
+  if (Number.isNaN(value)) return { ok: false, error: "Result is not a real number" };
   if (!Number.isFinite(value)) return { ok: false, error: "Result is too large to show" };
   return { ok: true, value };
+}
+
+// nthRoot returns the n-th root of a. Odd integer roots of negative numbers
+// are real (the cube root of -8 is -2); other roots of negative numbers aren't.
+function nthRoot(a: number, n: number): CalcResult {
+  if (n === 0) return { ok: false, error: "Root degree cannot be zero" };
+  if (a === 0 && n < 0) return { ok: false, error: "Cannot divide by zero" };
+  if (a >= 0) return { ok: true, value: a ** (1 / n) };
+  if (Number.isInteger(n) && n % 2 === 0) {
+    return { ok: false, error: "Cannot take an even root of a negative number" };
+  }
+  if (!Number.isInteger(n)) {
+    return { ok: false, error: "Cannot take a fractional root of a negative number" };
+  }
+  return { ok: true, value: -((-a) ** (1 / n)) };
 }
 
 // parseOperand turns user input into a number, or undefined if it's empty or
@@ -45,10 +72,13 @@ const OPERATION_SYMBOLS: Record<Operation, string> = {
   subtract: "−",
   multiply: "×",
   divide: "÷",
+  power: "^",
+  root: "√",
 };
 
 // formatEntry describes a successful calculation for the history panel, for
-// example '6 × 3 = 18'.
+// example '6 × 3 = 18' or '2 ^ 10 = 1024'. Roots read 'a √ b', for example
+// '27 √ 3 = 3' for the cube root of 27.
 export function formatEntry(a: number, b: number, op: Operation, value: number): string {
   return `${formatNumber(a)} ${OPERATION_SYMBOLS[op]} ${formatNumber(b)} = ${formatNumber(value)}`;
 }
@@ -66,6 +96,8 @@ export function mount(root: HTMLElement): void {
           <option value="subtract">Subtract</option>
           <option value="multiply">Multiply</option>
           <option value="divide">Divide</option>
+          <option value="power">Power</option>
+          <option value="root">Root</option>
         </select>
       </label>
       <label>Second number <input name="b" type="number" step="any" inputmode="decimal" /></label>
