@@ -52,6 +52,56 @@ function nthRoot(a: number, n: number): CalcResult {
   return { ok: true, value: -((-a) ** (1 / n)) };
 }
 
+export type MathFunction = "sqrt" | "sin" | "cos" | "tan" | "log" | "ln";
+
+const MATH_FUNCTIONS: readonly MathFunction[] = ["sqrt", "sin", "cos", "tan", "log", "ln"];
+
+export function isMathFunction(op: string): op is MathFunction {
+  return (MATH_FUNCTIONS as readonly string[]).includes(op);
+}
+
+// calculateFunction applies a single-number function to a. Angles for sin,
+// cos and tan are in degrees.
+export function calculateFunction(a: number, fn: MathFunction): CalcResult {
+  let value: number;
+  switch (fn) {
+    case "sqrt":
+      if (a < 0) return { ok: false, error: "Cannot take the square root of a negative number" };
+      value = Math.sqrt(a);
+      break;
+    case "log":
+    case "ln":
+      if (a <= 0) return { ok: false, error: "Logarithm needs a positive number" };
+      value = fn === "log" ? Math.log10(a) : Math.log(a);
+      break;
+    case "sin":
+    case "cos":
+    case "tan": {
+      // Reduce the angle first so large angles stay accurate.
+      const degrees = ((a % 360) + 360) % 360;
+      if (fn === "tan" && degrees % 180 === 90) {
+        return { ok: false, error: "Tangent is undefined for this angle" };
+      }
+      const radians = (degrees * Math.PI) / 180;
+      value = fn === "sin" ? Math.sin(radians) : fn === "cos" ? Math.cos(radians) : Math.tan(radians);
+      // sin(180) is 1.2e-16 in floating point; show it as 0.
+      if (Math.abs(value) < 1e-12) value = 0;
+      break;
+    }
+  }
+  if (Number.isNaN(value)) return { ok: false, error: "Result is not a real number" };
+  if (!Number.isFinite(value)) return { ok: false, error: "Result is too large to show" };
+  return { ok: true, value };
+}
+
+// formatFunctionEntry describes a successful single-number calculation for
+// the history panel, for example '√16 = 4' or 'sin(30) = 0.5'.
+export function formatFunctionEntry(a: number, fn: MathFunction, value: number): string {
+  const input = formatNumber(a);
+  const call = fn === "sqrt" ? `√${input}` : `${fn}(${input})`;
+  return `${call} = ${formatNumber(value)}`;
+}
+
 // parseOperand turns user input into a number, or undefined if it's empty or
 // not a valid number.
 export function parseOperand(text: string): number | undefined {
@@ -98,9 +148,15 @@ export function mount(root: HTMLElement): void {
           <option value="divide">Divide</option>
           <option value="power">Power</option>
           <option value="root">Root</option>
+          <option value="sqrt">Square root</option>
+          <option value="sin">Sine</option>
+          <option value="cos">Cosine</option>
+          <option value="tan">Tangent</option>
+          <option value="log">Log (base 10)</option>
+          <option value="ln">Natural log</option>
         </select>
       </label>
-      <label>Second number <input name="b" type="number" step="any" inputmode="decimal" /></label>
+      <label class="second-number">Second number <input name="b" type="number" step="any" inputmode="decimal" /></label>
       <button type="submit">Calculate</button>
     </form>
     <p class="error" role="alert" hidden></p>
@@ -117,6 +173,7 @@ export function mount(root: HTMLElement): void {
   const inputA = form.querySelector<HTMLInputElement>('input[name="a"]')!;
   const inputB = form.querySelector<HTMLInputElement>('input[name="b"]')!;
   const select = form.querySelector("select")!;
+  const secondLabel = form.querySelector<HTMLLabelElement>(".second-number")!;
   const errorEl = root.querySelector<HTMLParagraphElement>(".error")!;
   const resultEl = root.querySelector<HTMLOutputElement>(".result")!;
   const historyToggle = root.querySelector<HTMLButtonElement>(".history-toggle")!;
@@ -151,9 +208,31 @@ export function mount(root: HTMLElement): void {
     resultEl.hidden = false;
   };
 
+  // Single-number functions only use the first field, so hide the second.
+  const updateSecondField = (): void => {
+    secondLabel.hidden = isMathFunction(select.value);
+  };
+  select.addEventListener("change", updateSecondField);
+  select.addEventListener("input", updateSecondField);
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const a = parseOperand(inputA.value);
+    const fn = select.value;
+    if (isMathFunction(fn)) {
+      if (a === undefined) {
+        showError("Please enter a valid number in the first field");
+        return;
+      }
+      const result = calculateFunction(a, fn);
+      if (result.ok) {
+        showResult(result.value);
+        addToHistory(formatFunctionEntry(a, fn, result.value));
+      } else {
+        showError(result.error);
+      }
+      return;
+    }
     const b = parseOperand(inputB.value);
     if (a === undefined || b === undefined) {
       showError("Please enter a valid number in both fields");
