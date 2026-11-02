@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculate, formatNumber, mount, parseOperand } from "../src/app";
+import { calculate, calculateFunction, formatNumber, mount, parseOperand } from "../src/app";
 
 describe("app", () => {
   it("renders", () => {
@@ -32,5 +32,14 @@ describe("formatNumber", () => {
   it("hides floating point noise", () => {
     expect(formatNumber(0.1 + 0.2)).toBe("0.3");
     expect(formatNumber(-0)).toBe("0");
+  });
+});
+
+describe("calculateFunction", () => {
+  it("shows exact values for common angles", () => {
+    expect(calculateFunction(180, "sin")).toEqual({ ok: true, value: 0 });
+    expect(calculateFunction(90, "cos")).toEqual({ ok: true, value: 0 });
+    expect(calculateFunction(-90, "tan").ok).toBe(false);
+    expect(calculateFunction(450, "tan").ok).toBe(false);
   });
 });
