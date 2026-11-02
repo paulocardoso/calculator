@@ -1,0 +1,152 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #fff;
+  background: #000;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+h1 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #a5a5a5;
+  text-align: center;
+}
+
+.calculator {
+  width: min(360px, 100vw);
+  padding: 0 12px 24px;
+  box-sizing: border-box;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  min-height: 120px;
+  padding: 0 8px;
+}
+
+.memory-indicator {
+  font-size: 0.9rem;
+  color: #a5a5a5;
+}
+
+.display {
+  display: block;
+  font-size: 3.5rem;
+  font-weight: 300;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.display.is-error {
+  font-size: 1.5rem;
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.key {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  color: #fff;
+  background: #333;
+  cursor: pointer;
+}
+
+.key:active {
+  filter: brightness(1.4);
+}
+
+.key:focus-visible,
+.history-toggle:focus-visible,
+.history-store:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.keys-sci .key {
+  aspect-ratio: 2;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  background: #1c1c1c;
+}
+
+.key-util {
+  color: #000;
+  background: #a5a5a5;
+}
+
+.key-op {
+  background: #ff9f0a;
+  font-size: 2rem;
+}
+
+.key-op.is-active {
+  color: #ff9f0a;
+  background: #fff;
+}
+
+.key:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.key-zero {
+  grid-column: span 2;
+  aspect-ratio: auto;
+  border-radius: 999px;
+  text-align: left;
+  padding-left: 1.6rem;
+}
+
+.history-toggle {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  background: #1c1c1c;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.history h2 {
+  font-size: 1rem;
+  color: #a5a5a5;
+}
+
+.history-list {
+  padding-left: 1.2rem;
+}
+
+.history-list li {
+  margin-bottom: 6px;
+}
+
+.history-store {
+  margin-left: 8px;
+  border: none;
+  border-radius: 999px;
+  padding: 2px 10px;
+  color: #fff;
+  background: #333;
+  cursor: pointer;
+}
