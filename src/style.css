@@ -1,5 +1,5 @@
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
   color: #fff;
   background: #000;
 }
@@ -22,7 +22,7 @@ h1 {
 }
 
 .calculator {
-  width: min(360px, 100vw);
+  width: min(760px, 100vw);
   padding: 0 12px 24px;
   box-sizing: border-box;
 }
@@ -53,17 +53,36 @@ h1 {
   font-size: 1.5rem;
 }
 
-.keys {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+/* Like the iPhone in landscape: the scientific and memory keys in darker grey
+   columns to the left of the standard 4-column keypad, with pill keys. */
+.keypad {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
   gap: 10px;
   margin-top: 10px;
 }
 
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 60px;
+  gap: 10px;
+}
+
+.keys-main {
+  flex: 4;
+}
+
+.keys-sci {
+  flex: 3;
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .key {
-  aspect-ratio: 1;
   border: none;
-  border-radius: 50%;
+  border-radius: 999px;
+  font-family: inherit;
   font-size: 1.6rem;
   color: #fff;
   background: #333;
@@ -82,8 +101,6 @@ h1 {
 }
 
 .keys-sci .key {
-  aspect-ratio: 2;
-  border-radius: 999px;
   font-size: 1.1rem;
   background: #1c1c1c;
 }
@@ -110,8 +127,6 @@ h1 {
 
 .key-zero {
   grid-column: span 2;
-  aspect-ratio: auto;
-  border-radius: 999px;
   text-align: left;
   padding-left: 1.6rem;
 }
@@ -149,4 +164,34 @@ h1 {
   color: #fff;
   background: #333;
   cursor: pointer;
+}
+
+/* Portrait phones: the scientific and memory keys go above the round keys of
+   the standard keypad. */
+@media (max-width: 599px) {
+  .calculator {
+    width: min(360px, 100vw);
+  }
+
+  .keypad {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .keys {
+    grid-auto-rows: auto;
+  }
+
+  .keys-main .key {
+    aspect-ratio: 1;
+  }
+
+  .keys-main .key-zero {
+    aspect-ratio: auto;
+  }
+
+  .keys-sci {
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 40px;
+  }
 }
