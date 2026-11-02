@@ -141,72 +141,122 @@ export function formatEntry(a: number, b: number, op: Operation, value: number):
   return `${formatNumber(a)} ${OPERATION_SYMBOLS[op]} ${formatNumber(b)} = ${formatNumber(value)}`;
 }
 
+// KEYPAD_HTML is the calculator's keys, laid out like the iPhone Calculator:
+// the scientific and memory keys above the standard keypad. Each key names
+// its action in data-key.
+const KEYPAD_HTML = `
+  <div class="keys keys-sci" role="group" aria-label="Scientific and memory keys">
+    <button type="button" class="key key-memory" data-key="mc" aria-label="Memory clear">mc</button>
+    <button type="button" class="key key-memory" data-key="mr" aria-label="Memory recall">mr</button>
+    <button type="button" class="key key-memory" data-key="m+" aria-label="Memory plus">m+</button>
+    <button type="button" class="key key-memory" data-key="m-" aria-label="Memory minus">m−</button>
+    <button type="button" class="key key-fn" data-key="sqrt" aria-label="Square root">√</button>
+    <button type="button" class="key key-fn" data-key="power" aria-label="Power">xʸ</button>
+    <button type="button" class="key key-fn" data-key="root" aria-label="Root">ʸ√x</button>
+    <button type="button" class="key key-fn" data-key="ln" aria-label="Natural log">ln</button>
+    <button type="button" class="key key-fn" data-key="sin" aria-label="Sine">sin</button>
+    <button type="button" class="key key-fn" data-key="cos" aria-label="Cosine">cos</button>
+    <button type="button" class="key key-fn" data-key="tan" aria-label="Tangent">tan</button>
+    <button type="button" class="key key-fn" data-key="log" aria-label="Log (base 10)">log</button>
+  </div>
+  <div class="keys keys-main" role="group" aria-label="Keypad">
+    <button type="button" class="key key-util" data-key="clear" aria-label="All clear">AC</button>
+    <button type="button" class="key key-util" data-key="sign" aria-label="Change sign">±</button>
+    <button type="button" class="key key-util" data-key="percent" aria-label="Percent">%</button>
+    <button type="button" class="key key-op" data-key="divide" aria-label="Divide">÷</button>
+    <button type="button" class="key key-digit" data-key="7">7</button>
+    <button type="button" class="key key-digit" data-key="8">8</button>
+    <button type="button" class="key key-digit" data-key="9">9</button>
+    <button type="button" class="key key-op" data-key="multiply" aria-label="Multiply">×</button>
+    <button type="button" class="key key-digit" data-key="4">4</button>
+    <button type="button" class="key key-digit" data-key="5">5</button>
+    <button type="button" class="key key-digit" data-key="6">6</button>
+    <button type="button" class="key key-op" data-key="subtract" aria-label="Minus">−</button>
+    <button type="button" class="key key-digit" data-key="1">1</button>
+    <button type="button" class="key key-digit" data-key="2">2</button>
+    <button type="button" class="key key-digit" data-key="3">3</button>
+    <button type="button" class="key key-op" data-key="add" aria-label="Plus">+</button>
+    <button type="button" class="key key-digit key-zero" data-key="0">0</button>
+    <button type="button" class="key key-digit" data-key="." aria-label="Decimal point">.</button>
+    <button type="button" class="key key-op" data-key="equals" aria-label="Equals">=</button>
+  </div>
+`;
+
 // mount renders the app into root. It's separate from main.ts so tests can
 // render the app into a test document.
 export function mount(root: HTMLElement): void {
   root.innerHTML = `
     <h1>calculator</h1>
-    <form novalidate>
-      <label>First number <input name="a" type="number" step="any" inputmode="decimal" /></label>
-      <label>Operation
-        <select name="op">
-          <option value="add">Add</option>
-          <option value="subtract">Subtract</option>
-          <option value="multiply">Multiply</option>
-          <option value="divide">Divide</option>
-          <option value="power">Power</option>
-          <option value="root">Root</option>
-          <option value="sqrt">Square root</option>
-          <option value="sin">Sine</option>
-          <option value="cos">Cosine</option>
-          <option value="tan">Tangent</option>
-          <option value="log">Log (base 10)</option>
-          <option value="ln">Natural log</option>
-        </select>
-      </label>
-      <label class="second-number">Second number <input name="b" type="number" step="any" inputmode="decimal" /></label>
-      <button type="button" class="percent" aria-label="Percent">%</button>
-      <button type="submit">Calculate</button>
-    </form>
-    <p class="error" role="alert" hidden></p>
-    <output class="result" hidden></output>
-    <div class="memory" role="group" aria-label="Memory">
-      <button type="button" class="memory-plus" aria-label="Memory plus" disabled>M+</button>
-      <button type="button" class="memory-minus" aria-label="Memory minus" disabled>M−</button>
-      <button type="button" class="memory-recall" aria-label="Memory recall">MR</button>
-      <button type="button" class="memory-clear" aria-label="Memory clear">MC</button>
-      <span class="memory-indicator" hidden></span>
+    <div class="calculator">
+      <div class="screen">
+        <span class="memory-indicator" hidden></span>
+        <output class="display" aria-live="polite">0</output>
+      </div>
+      <div class="keypad">${KEYPAD_HTML}</div>
+      <button type="button" class="history-toggle" aria-expanded="false">History</button>
+      <section class="history" aria-label="History" hidden>
+        <h2>History</h2>
+        <p class="history-empty">No calculations yet</p>
+        <ol class="history-list"></ol>
+      </section>
     </div>
-    <button type="button" class="history-toggle" aria-expanded="false">History</button>
-    <section class="history" aria-label="History" hidden>
-      <h2>History</h2>
-      <p class="history-empty">No calculations yet</p>
-      <ol class="history-list"></ol>
-    </section>
   `;
 
-  const form = root.querySelector("form")!;
-  const inputA = form.querySelector<HTMLInputElement>('input[name="a"]')!;
-  const inputB = form.querySelector<HTMLInputElement>('input[name="b"]')!;
-  const select = form.querySelector("select")!;
-  const secondLabel = form.querySelector<HTMLLabelElement>(".second-number")!;
-  const errorEl = root.querySelector<HTMLParagraphElement>(".error")!;
-  const resultEl = root.querySelector<HTMLOutputElement>(".result")!;
+  const displayEl = root.querySelector<HTMLOutputElement>(".display")!;
+  const keypad = root.querySelector<HTMLDivElement>(".keypad")!;
+  const memoryIndicator = root.querySelector<HTMLSpanElement>(".memory-indicator")!;
+  const memoryPlus = keypad.querySelector<HTMLButtonElement>('[data-key="m+"]')!;
+  const memoryMinus = keypad.querySelector<HTMLButtonElement>('[data-key="m-"]')!;
+  const operatorKeys = Array.from(keypad.querySelectorAll<HTMLButtonElement>(".key-op"));
   const historyToggle = root.querySelector<HTMLButtonElement>(".history-toggle")!;
   const historyPanel = root.querySelector<HTMLElement>(".history")!;
   const historyEmpty = root.querySelector<HTMLParagraphElement>(".history-empty")!;
   const historyList = root.querySelector<HTMLOListElement>(".history-list")!;
-  const memoryPlus = root.querySelector<HTMLButtonElement>(".memory-plus")!;
-  const memoryMinus = root.querySelector<HTMLButtonElement>(".memory-minus")!;
-  const memoryRecall = root.querySelector<HTMLButtonElement>(".memory-recall")!;
-  const memoryClear = root.querySelector<HTMLButtonElement>(".memory-clear")!;
-  const memoryIndicator = root.querySelector<HTMLSpanElement>(".memory-indicator")!;
-  const percentButton = form.querySelector<HTMLButtonElement>(".percent")!;
 
-  // memory is the stored value; currentResult is the result on screen, or
-  // undefined while an error (or nothing) is shown.
+  // entry is the number in the display as typed (it can be '1.' or '-0'),
+  // and error replaces it while a calculation has failed.
+  let entry = "0";
+  let error: string | undefined;
+  // accumulator and pendingOp are the first number and operation of a
+  // calculation waiting for its second number.
+  let accumulator = 0;
+  let pendingOp: Operation | undefined;
+  // awaitingOperand is true right after an operator key, before the second
+  // number has been given. startNew is true while the next digit should
+  // start a new number instead of extending the display (after a result).
+  let awaitingOperand = false;
+  let startNew = false;
   let memory = 0;
-  let currentResult: number | undefined;
+
+  const update = (): void => {
+    displayEl.textContent = error ?? entry;
+    displayEl.classList.toggle("is-error", error !== undefined);
+    memoryPlus.disabled = error !== undefined;
+    memoryMinus.disabled = error !== undefined;
+    for (const k of operatorKeys) {
+      const active = awaitingOperand && pendingOp === k.dataset.key;
+      k.classList.toggle("is-active", active);
+      if (k.dataset.key !== "equals") k.setAttribute("aria-pressed", String(active));
+    }
+  };
+
+  const current = (): number => Number(entry);
+
+  const showValue = (value: number): void => {
+    entry = formatNumber(value);
+    error = undefined;
+    startNew = true;
+    awaitingOperand = false;
+  };
+
+  // fail shows message instead of a number and drops any pending
+  // calculation; the next digit starts a new entry.
+  const fail = (message: string): void => {
+    error = message;
+    pendingOp = undefined;
+    awaitingOperand = false;
+    startNew = true;
+  };
 
   // setMemory stores value and shows it, hiding the indicator while it's 0
   // (including floating point noise such as 0.1 + 0.2 − 0.3).
@@ -217,34 +267,11 @@ export function mount(root: HTMLElement): void {
     memoryIndicator.hidden = shown === "0";
   };
 
-  const setCurrentResult = (value: number | undefined): void => {
-    currentResult = value;
-    memoryPlus.disabled = value === undefined;
-    memoryMinus.disabled = value === undefined;
-  };
-
-  memoryPlus.addEventListener("click", () => {
-    if (currentResult !== undefined) setMemory(memory + currentResult);
-  });
-  memoryMinus.addEventListener("click", () => {
-    if (currentResult !== undefined) setMemory(memory - currentResult);
-  });
-  memoryRecall.addEventListener("click", () => {
-    inputA.value = formatNumber(memory);
-    inputA.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  memoryClear.addEventListener("click", () => setMemory(0));
-
-  historyToggle.addEventListener("click", () => {
-    historyPanel.hidden = !historyPanel.hidden;
-    historyToggle.setAttribute("aria-expanded", String(!historyPanel.hidden));
-  });
-
   // addToHistory puts the newest entry at the top of the list, with a control
   // that stores the entry's result in memory.
-  const addToHistory = (entry: string, value: number): void => {
+  const addToHistory = (text: string, value: number): void => {
     const item = document.createElement("li");
-    item.append(entry, " ");
+    item.append(text, " ");
     const store = document.createElement("button");
     store.type = "button";
     store.className = "history-store";
@@ -255,135 +282,166 @@ export function mount(root: HTMLElement): void {
     historyEmpty.hidden = true;
   };
 
-  const showError = (message: string): void => {
-    resultEl.textContent = "";
-    resultEl.hidden = true;
-    errorEl.textContent = message;
-    errorEl.hidden = false;
-    setCurrentResult(undefined);
-  };
-
-  const showResult = (value: number): void => {
-    errorEl.textContent = "";
-    errorEl.hidden = true;
-    resultEl.textContent = `Result: ${formatNumber(value)}`;
-    resultEl.hidden = false;
-    setCurrentResult(value);
-  };
-
-  const clear = (): void => {
-    inputA.value = "";
-    inputB.value = "";
-    typedText.delete(inputA);
-    typedText.delete(inputB);
-    errorEl.textContent = "";
-    errorEl.hidden = true;
-    resultEl.textContent = "";
-    resultEl.hidden = true;
-    operationChosen = false;
-    inputA.focus();
-  };
-  // Single-number functions only use the first field, so hide the second.
-  const updateSecondField = (): void => {
-    secondLabel.hidden = isMathFunction(select.value);
-  };
-  select.addEventListener("change", updateSecondField);
-  select.addEventListener("input", updateSecondField);
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const a = parseOperand(inputA.value);
-    const fn = select.value;
-    if (isMathFunction(fn)) {
-      if (a === undefined) {
-        showError("Please enter a valid number in the first field");
-        return;
-      }
-      const result = calculateFunction(a, fn);
-      if (result.ok) {
-        showResult(result.value);
-        addToHistory(formatFunctionEntry(a, fn, result.value), result.value);
-      } else {
-        showError(result.error);
-      }
-      return;
+  const inputDigit = (d: string): void => {
+    if (error !== undefined || startNew) {
+      entry = "0";
+      error = undefined;
+      startNew = false;
+      awaitingOperand = false;
     }
-    const b = parseOperand(inputB.value);
-    if (a === undefined || b === undefined) {
-      showError("Please enter a valid number in both fields");
-      return;
-    }
-    const op = select.value as Operation;
-    const result = calculate(a, b, op);
-    if (result.ok) {
-      showResult(result.value);
-      addToHistory(formatEntry(a, b, op, result.value), result.value);
+    if (d === ".") {
+      if (!entry.includes(".")) entry += ".";
+    } else if (entry === "0") {
+      entry = d;
+    } else if (entry === "-0") {
+      entry = `-${d}`;
     } else {
-      showError(result.error);
-    }
-  });
-
-  // Keyboard support. Digits typed with focus outside the number fields go to
-  // the active field: the first one until an operation has been chosen, then
-  // the second one.
-  let operationChosen = false;
-  select.addEventListener("change", () => {
-    operationChosen = true;
-  });
-
-  // A number field's value is "" while its text isn't a valid number yet (for
-  // example "1."), so the text typed from outside the field is remembered
-  // until the field changes some other way.
-  const typedText = new Map<HTMLInputElement, { text: string; value: string }>();
-  let appending = false;
-  for (const input of [inputA, inputB]) {
-    input.addEventListener("input", () => {
-      if (!appending) typedText.delete(input);
-    });
-  }
-
-  const append = (input: HTMLInputElement, key: string): void => {
-    const state = typedText.get(input);
-    const current = state && state.value === input.value ? state.text : input.value;
-    const text = current + key;
-    input.value = text;
-    typedText.set(input, { text, value: input.value });
-    appending = true;
-    try {
-      input.dispatchEvent(
-        new InputEvent("input", { bubbles: true, data: key, inputType: "insertText" }),
-      );
-    } finally {
-      appending = false;
+      entry += d;
     }
   };
 
-  // The active field is the first one until a two-number operation has been
-  // chosen, then the second one.
-  const activeField = (): HTMLInputElement =>
-    operationChosen && !isMathFunction(select.value) ? inputB : inputA;
+  // finish works out the pending calculation, returning whether it worked.
+  const finish = (): boolean => {
+    const a = accumulator;
+    const b = current();
+    const op = pendingOp!;
+    pendingOp = undefined;
+    const result = calculate(a, b, op);
+    if (!result.ok) {
+      fail(result.error);
+      return false;
+    }
+    showValue(result.value);
+    addToHistory(formatEntry(a, b, op, result.value), result.value);
+    return true;
+  };
 
-  // percent divides the active field by 100. It only changes the field; it
-  // doesn't calculate or add to the history.
-  const percent = (): void => {
-    const input = activeField();
-    const n = parseOperand(input.value);
-    if (n === undefined) {
-      showError(`Please enter a valid number in the ${input === inputA ? "first" : "second"} field`);
+  const chooseOperation = (op: Operation): void => {
+    if (error !== undefined) return;
+    // With a second number given, work out the pending result first.
+    if (pendingOp !== undefined && !awaitingOperand && !finish()) return;
+    accumulator = current();
+    pendingOp = op;
+    awaitingOperand = true;
+    startNew = true;
+  };
+
+  const equals = (): void => {
+    if (error !== undefined) return;
+    if (pendingOp === undefined) {
+      startNew = true;
       return;
     }
-    errorEl.textContent = "";
-    errorEl.hidden = true;
-    input.value = formatNumber(n / 100);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    finish();
   };
-  percentButton.addEventListener("click", percent);
 
-  const isEditable = (el: Element): boolean =>
-    el instanceof HTMLTextAreaElement ||
-    (el instanceof HTMLElement && el.isContentEditable) ||
-    (el instanceof HTMLInputElement &&
-      !["button", "submit", "reset", "checkbox", "radio", "range", "color", "file", "image"].includes(el.type));
+  const applyFunction = (fn: MathFunction): void => {
+    if (error !== undefined) return;
+    const a = current();
+    const result = calculateFunction(a, fn);
+    if (!result.ok) {
+      fail(result.error);
+      return;
+    }
+    showValue(result.value);
+    addToHistory(formatFunctionEntry(a, fn, result.value), result.value);
+  };
+
+  const clearAll = (): void => {
+    entry = "0";
+    error = undefined;
+    pendingOp = undefined;
+    awaitingOperand = false;
+    startNew = false;
+  };
+
+  const toggleSign = (): void => {
+    if (error !== undefined) return;
+    if (awaitingOperand) {
+      // Start the second number as a negative one.
+      entry = "-0";
+      awaitingOperand = false;
+      startNew = false;
+      return;
+    }
+    entry = entry.startsWith("-") ? entry.slice(1) : `-${entry}`;
+  };
+
+  // percent divides the displayed number by 100. It doesn't calculate or add
+  // to the history.
+  const percent = (): void => {
+    if (error !== undefined) return;
+    entry = formatNumber(current() / 100);
+    awaitingOperand = false;
+    startNew = true;
+  };
+
+  // backspace deletes the last typed character; results and errors stay.
+  const backspace = (): void => {
+    if (error !== undefined || startNew) return;
+    entry = entry.slice(0, -1);
+    if (entry === "" || entry === "-") entry = "0";
+  };
+
+  const pressKey = (name: string): void => {
+    if (/^[0-9.]$/.test(name)) inputDigit(name);
+    else if (isMathFunction(name)) applyFunction(name);
+    else
+      switch (name) {
+        case "add":
+        case "subtract":
+        case "multiply":
+        case "divide":
+        case "power":
+        case "root":
+          chooseOperation(name);
+          break;
+        case "equals":
+          equals();
+          break;
+        case "clear":
+          clearAll();
+          break;
+        case "sign":
+          toggleSign();
+          break;
+        case "percent":
+          percent();
+          break;
+        case "backspace":
+          backspace();
+          break;
+        case "m+":
+        case "m-":
+          if (error !== undefined) break;
+          setMemory(name === "m+" ? memory + current() : memory - current());
+          startNew = true;
+          break;
+        case "mr":
+          showValue(memory);
+          break;
+        case "mc":
+          setMemory(0);
+          break;
+      }
+    update();
+  };
+
+  keypad.addEventListener("click", (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>("button[data-key]");
+    if (button && !button.disabled) pressKey(button.dataset.key!);
+  });
+
+  // Clicking a button doesn't move focus to it, so Enter keeps meaning '='
+  // after a click instead of pressing the last clicked button again.
+  root.addEventListener("mousedown", (event) => {
+    if ((event.target as Element).closest("button")) event.preventDefault();
+  });
+
+  historyToggle.addEventListener("click", () => {
+    historyPanel.hidden = !historyPanel.hidden;
+    historyToggle.setAttribute("aria-expanded", String(!historyPanel.hidden));
+  });
 
   document.addEventListener("keydown", (event) => {
     // Ignore keys once the app is gone, keys other code has handled and
@@ -396,42 +454,20 @@ export function mount(root: HTMLElement): void {
     const inApp = root.contains(target);
     if (!inApp && target !== document.body && target !== document.documentElement) return;
     const key = event.key;
+    // A focused button keeps its own Enter behaviour.
+    if (key === "Enter" && target instanceof HTMLButtonElement) return;
 
-    if (key === "Escape") {
-      event.preventDefault();
-      clear();
-      return;
-    }
-
-    if (key === "Enter") {
-      // Buttons keep their own Enter behaviour (the Calculate button submits).
-      if (target instanceof HTMLButtonElement) return;
-      event.preventDefault();
-      form.requestSubmit();
-      return;
-    }
-
-    if (key === "%") {
-      if (target === activeField() || !isEditable(target)) {
-        event.preventDefault();
-        percent();
-      }
-      return;
-    }
-
-    const op = OPERATION_KEYS[key];
-    const inFirstOrOutside = target === inputA || !isEditable(target);
-    if (op && inFirstOrOutside && parseOperand(inputA.value) !== undefined) {
-      event.preventDefault();
-      select.value = op;
-      operationChosen = true;
-      inputB.focus();
-      return;
-    }
-
-    if (/^[0-9.]$/.test(key) && !isEditable(target)) {
-      event.preventDefault();
-      append(operationChosen ? inputB : inputA, key);
-    }
+    let name: string | undefined;
+    if (/^[0-9.]$/.test(key)) name = key;
+    else if (Object.hasOwn(OPERATION_KEYS, key)) name = OPERATION_KEYS[key];
+    else if (key === "Enter" || key === "=") name = "equals";
+    else if (key === "Escape") name = "clear";
+    else if (key === "Backspace") name = "backspace";
+    else if (key === "%") name = "percent";
+    if (name === undefined) return;
+    event.preventDefault();
+    pressKey(name);
   });
+
+  update();
 }
