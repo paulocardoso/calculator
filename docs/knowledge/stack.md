@@ -29,7 +29,6 @@ Languages, frameworks, libraries and tools, with versions where they matter, and
 
 The repository has no ESLint, Prettier or other formatter config, and `package.json` has no `lint` script. Type checking happens only in `npm run build`, not in `npm test`.
 
-<!-- dexys id=node-version status=uncertain kind=question draft=8248cf87b37b -->
 ## Which Node.js version should be used?
 
-`README.md` says the project was 'Started by Dark Factory from the web template'. Nothing records a supported Node.js version: no `engines` field, `.nvmrc` or CI config.
+26v
