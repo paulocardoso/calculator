@@ -1,0 +1,75 @@
+{
+  "note": "Drafted by the Dexys Factory Blueprint. Merging confirms it; edit anything that's wrong, and the map becomes Authoritative.",
+  "draft": "d228ae89e614",
+  "parts": [
+    {
+      "id": "user",
+      "name": "Calculator user",
+      "kind": "person",
+      "level": "c1",
+      "description": "A person using the iPhone-style calculator in a browser.",
+      "status": "existing",
+      "files": [
+        "src/app.ts"
+      ]
+    },
+    {
+      "id": "calculator",
+      "name": "calculator",
+      "kind": "application",
+      "level": "c1",
+      "description": "A static, browser-only scientific calculator with memory and history, and no backend or outside services.",
+      "status": "existing",
+      "files": [
+        "README.md",
+        "index.html",
+        "src/main.ts"
+      ]
+    },
+    {
+      "id": "web-app",
+      "name": "Calculator web page",
+      "kind": "application",
+      "level": "c2",
+      "description": "A Vite-built single-page app in plain TypeScript and DOM: `mount()` renders the keypad, display and history panel and handles all input.",
+      "status": "existing",
+      "files": [
+        "index.html",
+        "src/main.ts",
+        "src/app.ts",
+        "src/style.css"
+      ]
+    },
+    {
+      "id": "page-state",
+      "name": "In-page state (memory and DOM)",
+      "kind": "datastore",
+      "level": "c2",
+      "description": "Closure variables in `mount()` (entry, pending operation, memory) plus history `\u003cli\u003e` elements in the DOM; lost on reload.",
+      "status": "existing",
+      "files": [
+        "src/app.ts"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "user",
+      "to": "calculator",
+      "label": "taps keys and types on the keyboard",
+      "status": "existing"
+    },
+    {
+      "from": "user",
+      "to": "web-app",
+      "label": "clicks keys, presses keys, reads display and history",
+      "status": "existing"
+    },
+    {
+      "from": "web-app",
+      "to": "page-state",
+      "label": "reads and writes entry, memory and history",
+      "status": "existing"
+    }
+  ]
+}
